@@ -89,10 +89,10 @@ async function loadSettings(){
   settings.minDistanceM = s3?.value ?? settings.minDistanceM;
   settings.maxSpeedKmh = s4?.value ?? settings.maxSpeedKmh;
 
-  // Reflete nos inputs
-  qs('#setMaxAccuracy').value = String(settings.maxAccuracyM);
-  qs('#setMinInterval').value = String(Math.round(settings.minIntervalMs/1000));
-  qs('#setMinDistance').value = String(settings.minDistanceM);
+  // Reflete nos inputs (IDs conforme index.html)
+  qs('#setMaxAcc').value = String(settings.maxAccuracyM);
+  qs('#setMinInt').value = String(Math.round(settings.minIntervalMs / 1000));
+  qs('#setMinDist').value = String(settings.minDistanceM);
   qs('#setMaxSpeed').value = String(settings.maxSpeedKmh);
 
   // Atualiza tracker
@@ -633,9 +633,9 @@ async function deleteSelectedJourney(){
 
 // --------- Settings / Backup ---------
 async function saveSettingsFromUI(){
-  const maxAcc = Number(qs('#setMaxAccuracy').value);
-  const minIntSec = Number(qs('#setMinInterval').value);
-  const minDist = Number(qs('#setMinDistance').value);
+  const maxAcc = Number(qs('#setMaxAcc').value);
+  const minIntSec = Number(qs('#setMinInt').value);
+  const minDist = Number(qs('#setMinDist').value);
   const maxSp = Number(qs('#setMaxSpeed').value);
 
   if (!Number.isFinite(maxAcc) || maxAcc < 5 || maxAcc > 500) return toast('Precisão inválida.', 'warn');
