@@ -1,0 +1,14 @@
+{
+  "name": "MotoLog — Gestão + Trajetos",
+  "short_name": "MotoLog",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "description": "Gestão financeira e registro de trajetos (moto-uber) com uso offline-first.",
+  "icons": [
+    {"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

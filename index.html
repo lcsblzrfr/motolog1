@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>MotoLog — Gestão + Trajetos</title>
+
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" />
+
+  <!-- Leaflet via CDN; será cacheado no primeiro uso pelo Service Worker -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">ML</div>
+        <div>
+          <div class="brand-title">MotoLog</div>
+          <div class="brand-sub">Gestão + trajeto (offline-first)</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="btnTheme" class="icon-btn" title="Alternar tema" aria-label="Alternar tema">
+          <span class="icon">☾</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- HOME -->
+      <section id="view-home" class="view active" aria-labelledby="tab-home">
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Jornada</div>
+            <div id="shiftStatus" class="status">Carregando…</div>
+            <div class="row gap">
+              <button id="btnStart" class="btn primary">Iniciar jornada</button>
+              <button id="btnStop" class="btn danger" disabled>Parar & salvar</button>
+            </div>
+            <div class="row gap">
+              <button id="btnWake" class="btn" data-state="off">Manter tela ativa</button>
+              <button id="btnCenter" class="btn">Centralizar mapa</button>
+            </div>
+            <div class="muted tiny" id="gpsHint">
+              Dica: para registrar o trajeto melhor, use como app instalado (PWA) e mantenha aberto.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Resumo (hoje)</div>
+            <div class="kpis">
+              <div class="kpi">
+                <div class="kpi-label">Receita</div>
+                <div id="kpiIncome" class="kpi-value">R$ 0,00</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Despesas</div>
+                <div id="kpiExpense" class="kpi-value">R$ 0,00</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Lucro</div>
+                <div id="kpiProfit" class="kpi-value">R$ 0,00</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Distância (hoje)</div>
+                <div id="kpiKm" class="kpi-value">0,0 km</div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="kpis">
+              <div class="kpi">
+                <div class="kpi-label">R$/km</div>
+                <div id="kpiRpk" class="kpi-value">R$ 0,00</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Custo/km</div>
+                <div id="kpiCpk" class="kpi-value">R$ 0,00</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">R$/h</div>
+                <div id="kpiRph" class="kpi-value">R$ 0,00</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Custo/h</div>
+                <div id="kpiCph" class="kpi-value">R$ 0,00</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Mapa (ao vivo)</div>
+            <div id="map" class="map"></div>
+            <div class="row between tiny muted" style="margin-top:10px;">
+              <div id="gpsLive">GPS: —</div>
+              <div id="pointsLive">Pontos: 0</div>
+            </div>
+            <div class="row between tiny muted">
+              <div id="distLive">Distância: 0 m</div>
+              <div id="timeLive">Tempo: 0:00</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FINANCE -->
+      <section id="view-finance" class="view" aria-labelledby="tab-finance">
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Novo lançamento</div>
+            <form id="txForm" class="form">
+              <div class="row gap">
+                <label class="seg">
+                  <input type="radio" name="txType" value="income" checked />
+                  <span>Ganho</span>
+                </label>
+                <label class="seg">
+                  <input type="radio" name="txType" value="expense" />
+                  <span>Despesa</span>
+                </label>
+              </div>
+
+              <div class="row gap">
+                <div class="field">
+                  <label>Valor (R$)</label>
+                  <input id="txAmount" inputmode="decimal" placeholder="ex.: 42,50" required />
+                </div>
+                <div class="field">
+                  <label>Data/hora</label>
+                  <input id="txTs" type="datetime-local" required />
+                </div>
+              </div>
+
+              <div class="row gap">
+                <div class="field">
+                  <label id="txLabelCat">Fonte</label>
+                  <select id="txCategory"></select>
+                </div>
+                <div class="field">
+                  <label>Vincular à jornada (opcional)</label>
+                  <select id="txJourney"></select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Observações (opcional)</label>
+                <input id="txNotes" placeholder="ex.: corrida longa, gasolina, troca de óleo" />
+              </div>
+
+              <button class="btn primary" type="submit">Salvar lançamento</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Resumo</div>
+            <div class="row gap">
+              <select id="rangeSelect" class="select">
+                <option value="today">Hoje</option>
+                <option value="week">Últimos 7 dias</option>
+                <option value="month">Últimos 30 dias</option>
+                <option value="year">Últimos 365 dias</option>
+                <option value="all">Tudo</option>
+              </select>
+              <button id="btnCsv" class="btn">Exportar CSV</button>
+            </div>
+            <div class="kpis" style="margin-top:12px;">
+              <div class="kpi"><div class="kpi-label">Receita</div><div id="sumIncome" class="kpi-value">R$ 0,00</div></div>
+              <div class="kpi"><div class="kpi-label">Despesas</div><div id="sumExpense" class="kpi-value">R$ 0,00</div></div>
+              <div class="kpi"><div class="kpi-label">Lucro</div><div id="sumProfit" class="kpi-value">R$ 0,00</div></div>
+            </div>
+            <div class="divider"></div>
+            <div id="txList" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="view-history" class="view" aria-labelledby="tab-history">
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Jornadas</div>
+            <div class="row gap">
+              <select id="journeyRange" class="select">
+                <option value="week">Últimos 7 dias</option>
+                <option value="month" selected>Últimos 30 dias</option>
+                <option value="year">Últimos 365 dias</option>
+                <option value="all">Tudo</option>
+              </select>
+              <button id="btnDemo" class="btn">Inserir demo</button>
+            </div>
+            <div id="journeyList" class="list" style="margin-top:12px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Detalhes da jornada</div>
+            <div id="journeyDetails" class="muted">Selecione uma jornada no painel ao lado.</div>
+            <div class="row gap" style="margin-top:12px;">
+              <button id="btnEditJourney" class="btn" disabled>Editar</button>
+              <button id="btnDeleteJourney" class="btn danger" disabled>Apagar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS / BACKUP -->
+      <section id="view-settings" class="view" aria-labelledby="tab-settings">
+        <div class="grid">
+          <div class="card">
+            <div class="card-title">Configurações do GPS</div>
+            <div class="form">
+              <div class="row gap">
+                <div class="field">
+                  <label>Precisão máxima (m)</label>
+                  <input id="setMaxAcc" inputmode="numeric" />
+                </div>
+                <div class="field">
+                  <label>Intervalo mínimo (s)</label>
+                  <input id="setMinInt" inputmode="numeric" />
+                </div>
+              </div>
+              <div class="row gap">
+                <div class="field">
+                  <label>Distância mínima (m)</label>
+                  <input id="setMinDist" inputmode="numeric" />
+                </div>
+                <div class="field">
+                  <label>Velocidade máx. (km/h)</label>
+                  <input id="setMaxSpeed" inputmode="numeric" />
+                </div>
+              </div>
+              <button id="btnSaveSettings" class="btn primary">Salvar configurações</button>
+              <div class="tiny muted" style="margin-top:10px;">
+                Sugestão: precisão 50m, intervalo 3s, distância 8m, velocidade máx. 160km/h.
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Backup</div>
+            <div class="row gap">
+              <button id="btnExport" class="btn">Exportar JSON</button>
+              <label class="btn" for="importFile" style="text-align:center;">Importar JSON</label>
+              <input id="importFile" type="file" accept="application/json" hidden />
+            </div>
+            <div class="row gap" style="margin-top:10px;">
+              <button id="btnWipe" class="btn danger">Apagar tudo</button>
+            </div>
+            <div class="tiny muted" style="margin-top:10px;">
+              Importação oferece duas opções: <b>mesclar</b> ou <b>substituir</b>.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Limitações importantes</div>
+            <div class="tiny muted">
+              Android pode pausar GPS em segundo plano. Para reduzir isso: instale como PWA, deixe o app aberto durante a jornada e desative otimização de bateria para o navegador.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="Navegação">
+      <button id="tab-home" class="tab active" data-target="home">Início</button>
+      <button id="tab-finance" class="tab" data-target="finance">Financeiro</button>
+      <button id="tab-history" class="tab" data-target="history">Jornadas</button>
+      <button id="tab-settings" class="tab" data-target="settings">Ajustes</button>
+    </nav>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="./src/app.js"></script>
+
+  <script>
+    // Registrar service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
